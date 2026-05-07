@@ -1,0 +1,320 @@
+static const char sccsid[]= "@(#) MQMBID sn=p944-L251007.1.DE su=f84fdb91fb9772dfb286437c1f42e7849ffc8dc7 pn=samples/c/xatm/amqsxaf0.pre";
+/******************************************************************************/
+/*                                                                            */
+/* Program name: AMQSXAG                                                      */
+/*                                                                            */
+/* Description:  Sample C program for MQ coordinating XA-compliant database   */
+/*               managers.                                                    */
+/*                                                                            */
+/* Note:         Useful information and diagrams about this sample are in the */
+/*               Application Programming Guide.                               */
+/*                                                                            */
+/* <copyright                                                                 */
+/* notice="lm-source-program"                                                 */
+/* pids=""                                                                    */
+/* years="1998,2016"                                                          */
+/* crc="3858133071" >                                                         */
+/* Licensed Materials - Property of IBM                                       */
+/*                                                                            */
+/*                                                                            */
+/*                                                                            */
+/* (C) Copyright IBM Corp. 1998, 2016 All Rights Reserved.                    */
+/*                                                                            */
+/* US Government Users Restricted Rights - Use, duplication or                */
+/* disclosure restricted by GSA ADP Schedule Contract with                    */
+/* IBM Corp.                                                                  */
+/* </copyright>                                                               */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Description: Functions to access MQFeeTB table in MQFeeDB database         */
+/*                                                                            */
+/* Function:    These functions provide access to MQFeeTB table in MQFeeDB    */
+/*              database, they are called from AMQSXAG0.C                     */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Notes:                                                                     */
+/*                                                                            */
+/*    This program was prepared for use with the IBM DB2 database product, it */
+/*    may need some modification to work with other database products.        */
+/*                                                                            */
+/*    The SQL error checking, uses the sample routines supplied by IBMs DB2   */
+/*    product, in UTILAPI.C, this will need to be compiled or replaced before */
+/*    compiling\linking.                                                      */
+/*                                                                            */
+/*    Before this sample can be compiled, the database and table must be      */
+/*    created. To create the database use the normal method for your database */
+/*    product, for example:                                                   */
+/*                                                                            */
+/*    DB2 CREATE DB MQFeeDB                                                   */
+/*                                                                            */
+/*    MQFeeTB table was created using the following SQL statement:            */
+/*                                                                            */
+/*       EXEC SQL CREATE TABLE MQFeeTB(Account      INTEGER     NOT NULL,     */
+/*                                     FeeDue       INTEGER     NOT NULL,     */
+/*                                     TranFee      INTEGER     NOT NULL,     */
+/*                                     Transactions INTEGER     NOT NULL,     */
+/*                                     PRIMARY KEY (Account));                */
+/*                                                                            */
+/*    MQFeeTB table was filled in using the following SQL statements:         */
+/*                                                                            */
+/*       EXEC SQL INSERT INTO MQFeeTB VALUES (1,0,50,0);                      */
+/*       EXEC SQL INSERT INTO MQFeeTB VALUES (2,0,50,0);                      */
+/*       EXEC SQL INSERT INTO MQFeeTB VALUES (3,0,50,0);                      */
+/*       etc.                                                                 */
+/*                                                                            */
+/******************************************************************************/
+
+/******************************************************************************/
+/* Includes                                                                   */
+/******************************************************************************/
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+/*----------------------------------------------------------------------------*/
+/* Include the DB2 error checking utility header                              */
+/*----------------------------------------------------------------------------*/
+#include "utilapi.h"
+
+/*----------------------------------------------------------------------------*/
+/* MQ includes                                                                */
+/*----------------------------------------------------------------------------*/
+#include <cmqc.h>                                /* MQI                       */
+
+/******************************************************************************/
+/* Defines                                                                    */
+/******************************************************************************/
+#ifndef OK
+   #define OK        0                           /* define OK as zero         */
+#endif
+
+/******************************************************************************/
+/* Define and declare an SQLCA (SQL Communication Area) structure             */
+/******************************************************************************/
+EXEC SQL INCLUDE SQLCA;
+
+/******************************************************************************/
+/* Define a macro for checking if an SQL call resulted in an error            */
+/******************************************************************************/
+#define CHECKERR(SQL_STR)                                                      \
+   if (sqlca.sqlcode != 0)                                                     \
+   {                                                                           \
+      rc = sqlca.sqlcode;                                                      \
+      SqlInfoPrint(SQL_STR, &sqlca, __LINE__, __FILE__);                       \
+   } /* endif */
+
+/******************************************************************************/
+/* SQL host declarations                                                      */
+/******************************************************************************/
+EXEC SQL BEGIN DECLARE SECTION;
+static sqlint32 hAccount;                        /* account number            */
+static sqlint32 hFeeDue;                         /* fee due                   */
+static sqlint32 hTranFee;                        /* Transaction fee           */
+static sqlint32 hTransactions;                   /* transactions              */
+EXEC SQL END DECLARE SECTION;
+
+/******************************************************************************/
+/*                                                                            */
+/* Function: ConnectToMQFeeDB                                                 */
+/*                                                                            */
+/* Description: Connect to MQFeeDB database                                   */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Function:                                                                  */
+/* ---------                                                                  */
+/* Connect to MQFeeDB database                                                */
+/*                                                                            */
+/* Input Parameters:                                                          */
+/* -----------------                                                          */
+/* None                                                                       */
+/*                                                                            */
+/* In/Out Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Output Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Returns:                                                                   */
+/* --------                                                                   */
+/* OK                             - normal execution                          */
+/* Reason                         - return code from SQL command              */
+/*                                                                            */
+/******************************************************************************/
+MQLONG ConnectToMQFeeDB(void)
+{
+   MQLONG rc=OK;                                 /* return code               */
+
+   EXEC SQL CONNECT TO MQFeeDB;
+   CHECKERR ("CONNECT TO MQFeeDB");
+
+   return(rc);
+}
+
+/******************************************************************************/
+/*                                                                            */
+/* Function: DeclareMQFeeDBCursor                                             */
+/*                                                                            */
+/* Description: Declare MQFeeDB database MQFeeTB table cursor                 */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Function:                                                                  */
+/* ---------                                                                  */
+/* Declare a cursor for updating MQFeeTB table in MQFeeDB database.           */
+/*                                                                            */
+/* Input Parameters:                                                          */
+/* -----------------                                                          */
+/* None                                                                       */
+/*                                                                            */
+/* In/Out Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Output Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Returns:                                                                   */
+/* --------                                                                   */
+/* OK                             - normal execution                          */
+/* Reason                         - return code from SQL command              */
+/*                                                                            */
+/******************************************************************************/
+MQLONG DeclareMQFeeDBCursor(void)
+{
+   MQLONG rc=OK;                                 /* return code               */
+
+   /***************************************************************************/
+   /* Declare the cursor for locking of reads from database                   */
+   /***************************************************************************/
+   EXEC SQL DECLARE curFee CURSOR FOR
+            SELECT FeeDue, TranFee, Transactions
+            FROM MQFeeTB
+            WHERE Account = :hAccount
+            FOR UPDATE OF FeeDue, Transactions;
+   CHECKERR ("DECLARE CURSOR");
+
+   return(rc);
+}
+
+/******************************************************************************/
+/*                                                                            */
+/* Function: GetMQFeeTBDetails                                                */
+/*                                                                            */
+/* Description: Get MQFeeTB table details for supplied account number         */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Function:                                                                  */
+/* ---------                                                                  */
+/* Get MQFeeTB table details from MQFeeDB database for the supplied account   */
+/* number.                                                                    */
+/*                                                                            */
+/* Input Parameters:                                                          */
+/* -----------------                                                          */
+/* MQLONG   account               - Account in MQFeeTB table                  */
+/*                                                                            */
+/* In/Out Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Output Parameters:                                                         */
+/* ------------------                                                         */
+/* MQLONG  *feeDue                - FeeDue in MQFeeTB table                   */
+/* MQLONG  *tranFee               - TranFee in MQFeeTB table                  */
+/* MQLONG  *transactions          - Transactions in MQFeeTB table             */
+/*                                                                            */
+/* Returns:                                                                   */
+/* --------                                                                   */
+/* OK                             - normal execution                          */
+/* Reason                         - return code from SQL command              */
+/*                                                                            */
+/******************************************************************************/
+MQLONG GetMQFeeTBDetails(MQLONG account, MQLONG *feeDue, MQLONG *tranFee,
+                         MQLONG *transactions)
+{
+   MQLONG rc=OK;                                 /* return code               */
+
+   /***************************************************************************/
+   /* Copy calling function variable to SQL host variable                     */
+   /***************************************************************************/
+   hAccount = account;
+
+   EXEC SQL OPEN curFee;
+   CHECKERR ("OPEN CURSOR");
+
+   if (rc == OK)
+   {
+      EXEC SQL FETCH curFee INTO :hFeeDue, :hTranFee, :hTransactions;
+      CHECKERR ("FETCH");
+   } /* endif */
+
+   /***************************************************************************/
+   /* Copy SQL host variables to calling function variables                   */
+   /***************************************************************************/
+   if (rc == OK)
+   {
+      *feeDue = hFeeDue;
+      *tranFee = hTranFee;
+      *transactions = hTransactions;
+   } /* endif */
+
+   return(rc);
+}
+
+/******************************************************************************/
+/*                                                                            */
+/* Function: UpdateMQFeeTBFeeDue                                              */
+/*                                                                            */
+/* Description: Update MQFeeTB table FeeDue and Transactions for the current  */
+/*              cursor                                                        */
+/*                                                                            */
+/******************************************************************************/
+/*                                                                            */
+/* Function:                                                                  */
+/* ---------                                                                  */
+/* Update MQFeeTB table FeeDue and Transactions in MQFeeDB database for the   */
+/* current cursor.                                                            */
+/*                                                                            */
+/* Input Parameters:                                                          */
+/* -----------------                                                          */
+/* MQLONG   feeDue                - FeeDue in MQFeeTB table                   */
+/* MQLONG   transactions          - Transactions in MQFeeTB table             */
+/*                                                                            */
+/* In/Out Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Output Parameters:                                                         */
+/* ------------------                                                         */
+/* None                                                                       */
+/*                                                                            */
+/* Returns:                                                                   */
+/* --------                                                                   */
+/* OK                             - normal execution                          */
+/* Reason                         - return code from SQL command              */
+/*                                                                            */
+/******************************************************************************/
+MQLONG UpdateMQFeeTBFeeDue(MQLONG feeDue, MQLONG transactions)
+{
+   MQLONG rc=OK;                                 /* return code               */
+
+   /***************************************************************************/
+   /* Copy calling function variables to SQL host variables                   */
+   /***************************************************************************/
+   hFeeDue = feeDue;
+   hTransactions = transactions;
+
+   EXEC SQL UPDATE MQFeeTB SET FeeDue = :hFeeDue,
+                               Transactions = :hTransactions
+                               WHERE CURRENT OF curFee;
+   CHECKERR ("UPDATE MQFeeTB");
+
+   return(rc);
+}

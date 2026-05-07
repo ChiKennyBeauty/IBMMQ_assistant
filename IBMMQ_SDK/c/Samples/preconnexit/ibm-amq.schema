@@ -1,0 +1,245 @@
+attributetype ( 1.3.18.0.2.4.3565
+	NAME 'ibm-amqChannelName'
+	DESC 'Specifies the name of the channel definition.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{20}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3566
+	NAME 'ibm-amqClientChannelWeight'
+	DESC 'Specifies a weighting to influence which client-connection channel definition is used.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3567
+	NAME 'ibm-amqConnectionAffinity'
+	DESC 'Specifies whether client applications that connect multiple times using the same queue manager name, use the same client channel.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3568
+	NAME 'ibm-amqConnectionName'
+	DESC 'Communications connection identifier. It specifies the particular communications links to be used by this channel.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{264}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3569
+	NAME 'ibm-amqDescription'
+	DESC 'Contains up to 64 bytes of text that describes the channel definition.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{64}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3571
+	NAME 'ibm-amqHeaderCompression'
+	DESC 'List of header data compression techniques supported by the channel.'
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{48}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3570
+	NAME 'ibm-amqHeartBeatInterval'
+	DESC 'Specifies the approximate time between heartbeat flows.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3573
+	NAME 'ibm-amqKeepAliveInterval'
+	DESC 'The attribute is used to specify a time-out value for a channel.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3574
+	NAME 'ibm-amqLocalAddress'
+	DESC 'Specifies the local communications address for the channel. The attribute only applies if Transport type (TRPTYPE) is TCP/IP.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{48}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3575
+	NAME 'ibm-amqMaximumMessageLength'
+	DESC 'Specifies the maximum length of a message that can be transmitted on the channel.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3576
+	NAME 'ibm-amqMessageCompression'
+	DESC 'List of message data compression techniques supported by the channel.'
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{48}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3577
+	NAME 'ibm-amqModeName'
+	DESC 'For use with LU 6.2 connections. It gives extra definition for the session characteristics of the connection when a communication session allocation is performed.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{8}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3578
+	NAME 'ibm-amqPassword'
+	DESC 'Specifies a password of maximum length 12 characters, although only the first 10 characters are used.'
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{12}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3579
+	NAME 'ibm-amqQueueManagerName'
+	DESC 'Name of the queue manager or queue manager group to which a IBM MQ client application can request connection.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{48}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3580
+	NAME 'ibm-amqReceiveExitName'
+	DESC 'Specifies the name of the user exit program to be run by the channel receive user exit. This can be a list of names of programs that are to be run in succession.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3581
+	NAME 'ibm-amqReceiveExitUserData'
+	DESC 'Specifies user data that is passed to the receive exit.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3582
+	NAME 'ibm-amqSecurityExitName'
+	DESC 'Specifies the name of the exit program to be run by the channel security exit.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3583
+	NAME 'ibm-amqSecurityExitUserData'
+	DESC 'Specifies user data that is passed to the security exit.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3584
+	NAME 'ibm-amqSendExitName'
+	DESC 'Specifies the name of the exit program to be run by the channel send exit. This can be a list of names of programs that are to be run in sequence.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3585
+	NAME 'ibm-amqSendExitUserData'
+	DESC 'Specifies user data that is passed to the send exit.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{999}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3586
+	NAME 'ibm-amqSharingConversations'
+	DESC 'Specifies the maximum number of conversations that share each TCP/IP channel instance.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3587
+	NAME 'ibm-amqSslCipherSpec'
+	DESC 'Defines a single CipherSpec for an SSL connection. It is valid only for channels with a transport type (TRPTYPE) of TCP.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{32}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3588
+	NAME 'ibm-amqSslPeerName'
+	DESC 'Used to check the Distinguished Name (DN) of the certificate from the peer queue manager or client at the other end of a IBM MQ channel.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{1024}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3589
+	NAME 'ibm-amqTransactionProgramName'
+	DESC 'For use with LU 6.2 connections. It is the name, or generic name, of the transaction program (MCA) to be run at the far end of the link.'
+	EQUALITY caseExactMatch
+	SUBSTR caseExactSubstringsMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{64}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3590
+	NAME 'ibm-amqTransportType'
+	DESC 'Transport type associated with the channel.'
+	EQUALITY integerMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3591
+	NAME 'ibm-amqUserID'
+	DESC 'Specifies a task user identifier of 12 characters.'
+	EQUALITY caseExactMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.15{12}
+	SINGLE-VALUE
+ )
+
+attributetype ( 1.3.18.0.2.4.3572
+	NAME 'ibm-amqIsClientDefault'
+	DESC 'To be used as a default client connection?'
+	EQUALITY booleanMatch
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+	SINGLE-VALUE
+ )
+
+objectclass ( 1.3.18.0.2.6.28
+	NAME 'container'
+	DESC 'An object that can contain other objects.'
+	SUP top
+	STRUCTURAL
+	MUST cn
+ )
+
+objectclass ( 1.3.18.0.2.6.668
+	NAME 'ibm-amqClientConnection'
+	DESC 'IBM MQ Client Connection Definition.'
+	SUP top
+	STRUCTURAL
+	MUST ( cn $ ibm-amqChannelName $ ibm-amqConnectionName )
+	MAY ( ibm-amqClientChannelWeight $ ibm-amqConnectionAffinity $ ibm-amqDescription $ ibm-amqHeaderCompression $ ibm-amqHeartBeatInterval $ ibm-amqKeepAliveInterval $ ibm-amqLocalAddress $ ibm-amqMaximumMessageLength $ ibm-amqMessageCompression $ ibm-amqModeName $ ibm-amqPassword $ ibm-amqQueueManagerName $ ibm-amqReceiveExitName $ ibm-amqReceiveExitUserData $ ibm-amqSecurityExitName $ ibm-amqSecurityExitUserData $ ibm-amqSendExitName $ ibm-amqSendExitUserData $ ibm-amqSharingConversations $ ibm-amqSslCipherSpec $ ibm-amqSslPeerName $ ibm-amqTransactionProgramName $ ibm-amqTransportType $ ibm-amqUserID )
+ )
+

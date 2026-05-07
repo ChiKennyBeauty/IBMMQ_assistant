@@ -1,0 +1,41 @@
+dn: o=MQuser
+objectClass: top
+objectClass: organization
+o: MQuser
+description: root entry for this directory
+
+dn: ou=Transport, o=MQuser
+objectClass: top
+objectClass: organizationalUnit
+ou: Transport
+description: Transport Department
+telephoneNumber: 555-111222
+
+dn: cn=London, ou=Transport, o=MQuser
+objectClass: top
+objectClass: mqApplication
+cn: London
+host: LondonHost
+mqChannel: SYSTEM.DEF.SVRCONN
+mqQueue: SYSTEM.DEFAULT.LOCAL.QUEUE
+description: Transport office in London
+
+dn: cn=Sydney, ou=Transport, o=MQuser
+objectClass: top
+objectClass: mqApplication
+cn: Sydney
+host: SydneyHost
+mqChannel: SYSTEM.DEF.SVRCONN
+mqQueue: SYSTEM.DEFAULT.LOCAL.QUEUE
+description: Transport office in Sydney
+
+dn: cn=Washington, ou=Transport, o=MQuser
+objectClass: top
+objectClass: mqApplication
+cn: Washington
+host: WashingtonHost
+mqChannel: SYSTEM.DEF.SVRCONN
+mqQueue: SYSTEM.DEFAULT.LOCAL.QUEUE
+description: Transport office in Washington
+
+

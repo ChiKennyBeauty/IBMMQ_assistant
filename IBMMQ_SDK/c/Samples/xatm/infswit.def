@@ -1,0 +1,27 @@
+;*******************************************************************************
+;*                                                                             *
+;* Module Name: infswit.def                                                    *
+;*                                                                             *
+;* Description: MQ XA switch export list for Informix                          *
+;*                                                                             *
+;* <copyright                                                                  *
+;* notice="lm-source-program"                                                  *
+;* pids="5724-B41,"                                                            *
+;* years="2004,2016"                                                           *
+;* crc="3526036327" >                                                          *
+;* Licensed Materials - Property of IBM                                        *
+;*                                                                             *
+;* 5724-B41,                                                                   *
+;*                                                                             *
+;* (C) Copyright IBM Corp. 2004, 2016 All Rights Reserved.                     *
+;*                                                                             *
+;* US Government Users Restricted Rights - Use, duplication or                 *
+;* disclosure restricted by GSA ADP Schedule Contract with                     *
+;* IBM Corp.                                                                   *
+;* </copyright>                                                                *
+;*                                                                             *
+;*******************************************************************************
+LIBRARY infswit
+
+EXPORTS
+   MQStart

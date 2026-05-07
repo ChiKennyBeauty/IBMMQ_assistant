@@ -1,0 +1,27 @@
+;*******************************************************************************
+;*                                                                             *
+;*  Module Name: amqswlm.exp                                                   *
+;*                                                                             *
+;*  Description: Sample cluster workload exit library export list, for use     *
+;*               with amqswlm0.c                                               *
+;*                                                                             *
+;*  <copyright                                                                 *
+;*  notice="lm-source-program"                                                 *
+;*  pids="5724-B41,"                                                           *
+;*  years="2002,"                                                              *
+;*  crc="613751591" >                                                          *
+;*  Licensed Materials - Property of IBM                                       *
+;*                                                                             *
+;*  5724-B41,                                                                  *
+;*                                                                             *
+;*  (C) Copyright IBM Corp. 2002,  All Rights Reserved.                        *
+;*                                                                             *
+;*  US Government Users Restricted Rights - Use, duplication or                *
+;*  disclosure restricted by GSA ADP Schedule Contract with                    *
+;*  IBM Corp.                                                                  *
+;*  </copyright>                                                               *
+;*                                                                             *
+;*******************************************************************************
+EXPORTS
+   clwlFunction
+

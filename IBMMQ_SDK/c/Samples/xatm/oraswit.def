@@ -1,0 +1,27 @@
+;*******************************************************************************
+;*                                                                             *
+;* Module Name: oraswit.def                                                    *
+;*                                                                             *
+;* Description: MQ XA switch export list for Oracle                            *
+;*                                                                             *
+;* <copyright                                                                  *
+;* notice="lm-source-program"                                                  *
+;* pids="5639-B43,"                                                            *
+;* years="1998,2016"                                                           *
+;* crc="2863915650" >                                                          *
+;* Licensed Materials - Property of IBM                                        *
+;*                                                                             *
+;* 5639-B43,                                                                   *
+;*                                                                             *
+;* (C) Copyright IBM Corp. 1998, 2016 All Rights Reserved.                     *
+;*                                                                             *
+;* US Government Users Restricted Rights - Use, duplication or                 *
+;* disclosure restricted by GSA ADP Schedule Contract with                     *
+;* IBM Corp.                                                                   *
+;* </copyright>                                                                *
+;*                                                                             *
+;*******************************************************************************
+LIBRARY oraswit
+
+EXPORTS
+   MQStart

@@ -1,0 +1,23 @@
+;*********************************************************************/
+;*                                                                   */
+;* <copyright                                                        */
+;* notice="lm-source-program"                                        */
+;* pids="5639-B43,"                                                  */
+;* years="2000,2001"                                                 */
+;* crc="1574458960" >                                                */
+;* Licensed Materials - Property of IBM                              */
+;*                                                                   */
+;* 5639-B43,                                                         */
+;*                                                                   */
+;* (C) Copyright IBM Corp. 2000, 2001 All Rights Reserved.           */
+;*                                                                   */
+;* US Government Users Restricted Rights - Use, duplication or       */
+;* disclosure restricted by GSA ADP Schedule Contract with           */
+;* IBM Corp.                                                         */
+;* </copyright>                                                      */
+;*                                                                   */
+;*********************************************************************/
+LIBRARY ORASWITD
+
+EXPORTS
+   MQStart

@@ -1,0 +1,681 @@
+static const char sccsid[] = "@(#) MQMBID sn=p944-L251007.1.DE su=f84fdb91fb9772dfb286437c1f42e7849ffc8dc7 pn=samples/oltp/amqscic0.ccs";
+ /********************************************************************/
+ /*                                                                  */
+ /* Program name: AMQSCIC0                                           */
+ /*                                                                  */
+ /* Environment : TXSeries CICS V4 or later                          */
+ /*                                                                  */
+ /* Description : Sample program to show a CICS transaction          */
+ /*               which processes the input queue called             */
+ /*               "SYSTEM.SAMPLE.CICS.WORKQUEUE" for messages that   */
+ /*               are in XMIT Q format and distributes these         */
+ /*               messages to the corresponding local queues under   */
+ /*               CICS syncpoint control. Messages that cannot       */
+ /*               be delivered are placed into the queue called      */
+ /*               "SYSTEM.SAMPLE.CICS.DLQ"                           */
+ /*                                                                  */
+ /*   <copyright                                                     */
+ /*   notice="lm-source-program"                                     */
+ /*   pids="5724-H72,"                                               */
+ /*   years="1994,2024"                                              */
+ /*   crc="1304644443" >                                             */
+ /*   Licensed Materials - Property of IBM                           */
+ /*                                                                  */
+ /*   5724-H72,                                                      */
+ /*                                                                  */
+ /*   (C) Copyright IBM Corp. 1994, 2024 All Rights Reserved.        */
+ /*                                                                  */
+ /*   US Government Users Restricted Rights - Use, duplication or    */
+ /*   disclosure restricted by GSA ADP Schedule Contract with        */
+ /*   IBM Corp.                                                      */
+ /*   </copyright>                                                   */
+ /*                                                                  */
+ /********************************************************************/
+ /*              IMPORTANT INFORMATION WHEN USING THIS PROGRAM       */
+ /*                        ON A IBM MQ CLIENT                        */
+ /*                                                                  */
+ /* If this program is to be used on a IBM MQ client then you        */
+ /* must ensure that a symbolic constant named "MQXACLIENT" is       */
+ /* defined at compile time.                                         */
+ /*                                                                  */
+ /* This can be done by specifying the compiler option: -DMQXACLIENT */
+ /*                                                                  */
+ /* The symbolic constant "MQXACLIENT" is referenced in the code by  */
+ /* the statement "#if defined(MQXACLIENT)".                         */
+ /*                                                                  */
+ /*                        END OF INFORMATION                        */
+ /********************************************************************/
+ /*                                                                  */
+ /*                     Program logic                                */
+ /*                     -------------                                */
+ /*                                                                  */
+ /*  main                                                            */
+ /*  ----                                                            */
+ /*       Establish CICS addressability                              */
+ /*       Connect to default Queue Manager                           */
+ /*       If connect unsuccessful                                    */
+ /*          Call RecordCallError                                    */
+ /*       Else                                                       */
+ /*         Open the input queue SYSTEM.SAMPLE.CICS.WORKQUEUE        */
+ /*         If open unsuccessful                                     */
+ /*            Call RecordCallError                                  */
+ /*         Else                                                     */
+ /*            Set the MQGET call parameters                         */
+ /*            Get a message from the input queue with wait          */
+ /*            Do while there are messages to be retrieved           */
+ /*               If expected message type                           */
+ /*                  Call ProcessMessage                             */
+ /*               Else                                               */
+ /*                  Call CheckQUnknownMsg                           */
+ /*               End-if                                             */
+ /*               Reset the call parameters                          */
+ /*               Get next message from the input queue with wait    */
+ /*            End-do                                                */
+ /*            If loop has ended for reason other than 'no           */
+ /*               message available'                                 */
+ /*               Call RecordCallError                               */
+ /*            End-if                                                */
+ /*            Close the input queue                                 */
+ /*            If close unsuccessful                                 */
+ /*               Call RecordCallError                               */
+ /*            End-if                                                */
+ /*         End-if                                                   */
+ /*         Disconnect from the Queue Manager                        */
+ /*       End-if                                                     */
+ /*                                                                  */
+ /*       Return to CICS                                             */
+ /*                                                                  */
+ /*  ProcessMessage                                                  */
+ /*  --------------                                                  */
+ /*       Set the MQPUT1 call parameters                             */
+ /*       Put the message on the target queue                        */
+ /*       If put unsuccessful                                        */
+ /*          Call RecordCallError                                    */
+ /*          Call ForwardMsgToDLQ, to forward the                    */
+ /*          message to the sample's dead-letter queue               */
+ /*       End-if                                                     */
+ /*                                                                  */
+ /*       Return to main function                                    */
+ /*                                                                  */
+ /*                                                                  */
+ /*  CheckQUnknownMsg                                                */
+ /*  ----------------                                                */
+ /*       Call RecordCallError                                       */
+ /*       Call ForwardMsgToDLQ, to forward the                       */
+ /*       message to the sample's dead-letter queue                  */
+ /*                                                                  */
+ /*       Return to main function                                    */
+ /*                                                                  */
+ /*                                                                  */
+ /*  RecordCallError                                                 */
+ /*  ---------------                                                 */
+ /*       Get the time from CICS                                     */
+ /*       Get CICS to format the date and time                       */
+ /*       Call PackToLong to convert the packed decimal              */
+ /*       number to an unpacked number                               */
+ /*       Build the output message data                              */
+ /*       Write the call error message to CSMT TDQ                   */
+ /*       Write the log error message to CSMT TDQ                    */
+ /*                                                                  */
+ /*       Return to main function                                    */
+ /*                                                                  */
+ /*                                                                  */
+ /* ForwardMsgToDLQ                                                  */
+ /* ---------------                                                  */
+ /*      Set the MQPUT1 call parameters to enable the message        */
+ /*      to be put on the samples dead-letter queue                  */
+ /*      If the message to be sent is longer than the buffer         */
+ /*         Set message length to the full buffer length             */
+ /*      End-if                                                      */
+ /*      Put the message on the sample's dead-letter queue           */
+ /*         Call RecordCallError                                     */
+ /*                                                                  */
+ /*      Return to main function                                     */
+ /*                                                                  */
+ /*                                                                  */
+ /* PackToLong                                                       */
+ /* ----------                                                       */
+ /*      Convert the CICS packed decimal task number to a            */
+ /*      long integer                                                */
+ /*                                                                  */
+ /*      Return to main function                                     */
+ /*                                                                  */
+ /*                                                                  */
+ /********************************************************************/
+
+#include <stdio.h>                          /* used for standard I/O */
+#include <string.h>                         /* string functions      */
+#include <stdlib.h>
+#include <time.h>                           /* time functions        */
+#include <dfhaid.h>                         /* CICS header file      */
+#include <cmqc.h>                           /* MQI header file       */
+#include "amqscih0.h"                       /* Local definitions     */
+
+#ifdef _WIN32
+#define CALLCONV __cdecl
+#else
+#define CALLCONV
+#endif
+
+MQLONG   Hconn;                          /* Connection handle        */
+MQHOBJ   Hobj_InputQ;                    /* Object handle            */
+MQLONG   CompCode;                       /* Completion code          */
+MQLONG   Reason;                         /* Qualifying reason        */
+MQOD     ObjDesc    = {MQOD_DEFAULT};    /* Object descriptor        */
+MQMD     MsgDesc    = {MQMD_DEFAULT};    /* Message descriptor       */
+MQLONG   OpenOptions;                    /* Control the MQOPEN call  */
+
+MQGMO    GetMsgOpts = {MQGMO_DEFAULT};   /* Get-Message Options      */
+MQLONG   MsgBuffLen;                     /* Length of message buffer */
+
+AMQSCIC0_INPUT MsgBuffer;                /* Message structure        */
+MQLONG         DataLen;                  /* Length of message        */
+
+AMQSCIC0_DLQ   DLQBuffer;                /* Message structure        */
+MQLONG         DLQLen;                   /* Length of message        */
+
+MQPMO    PutMsgOpts = {MQPMO_DEFAULT};   /* Put-Message Options      */
+MQLONG   PutBuffLen;                     /* Length of message buffer */
+
+MQCHAR48 QMName = "";                    /* Queue Manager Name       */
+MQCHAR48 InputQName = WORK_QNAME;        /* Input Queue Name         */
+MQLONG   InputLength = MQ_Q_NAME_LENGTH;
+
+char     ErrorMsg[160];         /* Error Message Buffer              */
+char     Operation[21];         /* Operation in which error occurred */
+char     ObjName[MQ_Q_NAME_LENGTH];               /* Name of Object */
+
+int      bConnected = FALSE;
+int      bBadMsg    = FALSE;
+
+/*********************************************************************/
+/* Function prototypes                                               */
+/*********************************************************************/
+void ProcessMessage(void);
+void CheckQUnknownMsg(void);
+void RecordCallError(void);
+void ForwardMsgToDLQ(void);
+void PackToLong(unsigned char *source,
+           unsigned int source_size,
+           long int *target);
+
+
+/*********************************************************************/
+/*  The main function initializes and controls the program flow.     */
+/*                                                                   */
+/*  After opening the input queue, the program enters a loop getting */
+/*  and processing messages.  Once no more messages are available,   */
+/*  shown by the wait interval expiring, control is returned to CICS.*/
+/*********************************************************************/
+
+void CALLCONV main(void)
+{
+   /******************************************************************/
+   /* Establish CICS addressability                                  */
+   /******************************************************************/
+
+   EXEC CICS ADDRESS EIB(dfheiptr);
+
+   /******************************************************************/
+   /* Connect to the Queue Manager. If the program is for an MQ      */
+   /* server it's the default Queue Manager, if its for an XA client */
+   /* the name is set below to serverQM.                             */
+   /******************************************************************/
+   #if defined(MQXACLIENT)
+      strcpy(QMName, "serverQM");
+   #endif
+
+   MQCONN(QMName,
+     &Hconn,
+     &CompCode,
+     &Reason);
+
+   /******************************************************************/
+   /* If we failed, then report error and exit                       */
+   /******************************************************************/
+
+   if (CompCode != MQCC_OK)
+      {
+      strncpy(Operation, "MQCONN", sizeof(Operation));
+      strncpy(ObjName, QMName, MQ_Q_MGR_NAME_LENGTH);
+      RecordCallError();
+      }
+      else
+      {
+      bConnected = TRUE;
+      }
+
+   /******************************************************************/
+   /* Set up the name of the work queue                              */
+   /******************************************************************/
+
+   strncpy(ObjDesc.ObjectName, InputQName, MQ_Q_NAME_LENGTH);
+
+   /******************************************************************/
+   /* Initialize options and open the queue for input                */
+   /******************************************************************/
+
+   if (CompCode == MQCC_OK)
+      {
+    OpenOptions = MQOO_INPUT_SHARED +
+                  MQOO_SAVE_ALL_CONTEXT;
+
+    MQOPEN(Hconn,
+           &ObjDesc,
+           OpenOptions,
+           &Hobj_InputQ,
+           &CompCode,
+           &Reason);
+      };
+
+   /******************************************************************/
+   /* Test the output from the open, if not OK then build an error   */
+   /* message                                                        */
+   /******************************************************************/
+
+   if (CompCode != MQCC_OK)
+      {
+      strncpy(Operation, "MQOPEN", sizeof(Operation));
+      strncpy(ObjName, ObjDesc.ObjectName, MQ_Q_NAME_LENGTH);
+      RecordCallError();
+      }
+   else
+      {
+      /***************************************************************/
+      /* Get and process messages                                    */
+      /***************************************************************/
+
+      GetMsgOpts.Version = MQGMO_VERSION_2;
+      GetMsgOpts.MatchOptions = MQMO_NONE;
+      GetMsgOpts.Options = MQGMO_WAIT +
+                      MQGMO_ACCEPT_TRUNCATED_MSG +
+                      MQGMO_SYNCPOINT;
+      GetMsgOpts.WaitInterval = WAIT_INTERVAL;
+      MsgBuffLen = sizeof(MsgBuffer);
+
+      /***************************************************************/
+      /* Make the first get call outside the loop                    */
+      /***************************************************************/
+
+      MQGET(Hconn,
+       Hobj_InputQ,
+       &MsgDesc,
+       &GetMsgOpts,
+       MsgBuffLen,
+       &MsgBuffer,
+       &DataLen,
+       &CompCode,
+       &Reason);
+
+      /***************************************************************/
+      /* Test the output of the get call inside the do-while loop.   */
+      /* Loop until the get call fails.                              */
+      /***************************************************************/
+
+      while (CompCode != MQCC_FAILED)
+    {
+    /************************************************************/
+    /* Handle the message                                       */
+    /************************************************************/
+
+    if (strncmp(MsgDesc.Format,
+                MQFMT_XMIT_Q_HEADER,
+                sizeof(MsgDesc.Format)) == 0)
+       {
+       ProcessMessage();
+       }
+    else
+       {
+       CheckQUnknownMsg();
+       }
+    EXEC CICS SYNCPOINT;
+
+    MQGET(Hconn,
+          Hobj_InputQ,
+          &MsgDesc,
+          &GetMsgOpts,
+          MsgBuffLen,
+          &MsgBuffer,
+          &DataLen,
+          &CompCode,
+          &Reason);
+
+    } /* end loop */
+
+      /***************************************************************/
+      /* Test the output of the get call.  If the call failed,       */
+      /* send an error message showing the completion code and       */
+      /* reason code, unless the reason code is NO_MSG_AVAILABLE.    */
+      /***************************************************************/
+
+      if (Reason != MQRC_NO_MSG_AVAILABLE)
+    {
+    strncpy(Operation, "MQGET", sizeof(Operation));
+    strncpy(ObjName, ObjDesc.ObjectName, MQ_Q_NAME_LENGTH);
+    RecordCallError();
+    }
+
+      MQCLOSE(Hconn,
+         &Hobj_InputQ,
+         MQCO_NONE,
+         &CompCode,
+         &Reason);
+
+      if (CompCode != MQCC_OK)
+    {
+    strncpy(Operation, "MQCLOSE", sizeof(Operation));
+    strncpy(ObjName, InputQName, MQ_Q_NAME_LENGTH);
+    RecordCallError();
+    }
+
+      } /* end else */
+
+   if (bConnected == TRUE)
+      {
+      MQDISC(&Hconn,
+        &CompCode,
+        &Reason);
+
+      if (CompCode != MQCC_OK)
+    {
+    strncpy(Operation, "MQDISC", sizeof(Operation));
+    strncpy(ObjName, QMName, MQ_Q_MGR_NAME_LENGTH);
+    RecordCallError();
+    }
+      }
+
+   /******************************************************************/
+   /* Return to CICS                                                 */
+   /******************************************************************/
+
+   EXEC CICS RETURN;
+
+   } /* end main */
+
+
+/*********************************************************************/
+/*  This function develops a reply message and puts it on the        */
+/*  reply queue, as specified in the input message.  If this         */
+/*  operation fails, record the error and forward the message        */
+/*  to the sample's dead-letter queue.                               */
+/*********************************************************************/
+
+void ProcessMessage(void)
+   {
+   /******************************************************************/
+   /* Set the object descriptor, message descriptor, and put-        */
+   /* message options to the values required to create the           */
+   /* reply message.                                                 */
+   /******************************************************************/
+
+   strncpy(ObjDesc.ObjectName,
+      MsgBuffer.XmitHeader.RemoteQName,
+      MQ_Q_NAME_LENGTH);
+   memset(ObjDesc.ObjectQMgrName,
+     ' ', MQ_Q_MGR_NAME_LENGTH);
+
+   PutMsgOpts.Options = MQPMO_SYNCPOINT +
+                   MQPMO_PASS_IDENTITY_CONTEXT;
+   PutMsgOpts.Context = Hobj_InputQ;
+
+   PutBuffLen  = min(DataLen, MsgBuffLen);
+   PutBuffLen -= sizeof(MQXQH);
+
+   MQPUT1(Hconn,
+     &ObjDesc,
+     &MsgBuffer.XmitHeader.MsgDesc,
+     &PutMsgOpts,
+     PutBuffLen,
+     &MsgBuffer.MessageData,
+     &CompCode,
+     &Reason);
+
+
+   if (CompCode != MQCC_OK)
+      {
+      strncpy(Operation, "MQPUT1", sizeof(Operation));
+      strncpy(ObjName, ObjDesc.ObjectName, MQ_Q_NAME_LENGTH);
+      RecordCallError();
+      bBadMsg = FALSE;
+      ForwardMsgToDLQ();
+      }
+
+   return;
+   }
+
+
+/*********************************************************************/
+/*  This function handles unexpected messages by recording the       */
+/*  error and forwarding the message to the sample's dead-letter     */
+/*  queue.                                                           */
+/*********************************************************************/
+
+void CheckQUnknownMsg(void)
+   {
+
+   strncpy(Operation, "BAD MSG",sizeof(Operation));
+   strncpy(ObjName, ObjDesc.ObjectName, MQ_Q_NAME_LENGTH);
+
+   RecordCallError();
+   bBadMsg = TRUE;
+   ForwardMsgToDLQ();
+
+   return;
+   }
+
+
+
+
+/*********************************************************************/
+/* This function writes two messages to the CICS operator defining   */
+/* the problem that has occurred. The failed Operation and Object    */
+/* Name fields are completed by the calling function.  The remaining */
+/* fields of the message are completed by this routine.              */
+/*********************************************************************/
+
+void RecordCallError(void)
+   {
+
+   char Abstime[8];
+   char Date[8];
+   char Time[8];
+   char Transaction[4];
+   long TaskNum;
+
+   short MsgLen;
+
+   /*****************************************************************/
+   /* Obtian information about transaction                          */
+   /*****************************************************************/
+
+   EXEC CICS ASKTIME
+   ABSTIME(Abstime);
+
+   EXEC CICS FORMATTIME
+   ABSTIME(Abstime)
+   DATE(Date) DATESEP
+   TIME(Time) TIMESEP;
+
+   strncpy(Transaction, dfheiptr->eibtrnid, sizeof(Transaction));
+
+   /*****************************************************************/
+   /* Call function to convert the packed decimal number into       */
+   /* unpacked number                                               */
+   /*****************************************************************/
+
+   PackToLong((unsigned char *)dfheiptr->eibtaskn,
+         sizeof(dfheiptr->eibtaskn), &TaskNum);
+
+   /*****************************************************************/
+   /* Format first error message                                    */
+   /*  - "An error has occurred in <Tran> <Task#> <Date> <Time>"    */
+   /*****************************************************************/
+
+   MsgLen = (short) sprintf(ErrorMsg, ERROR_MSG_1, Transaction,
+                       TaskNum, Date, Time);
+
+   EXEC CICS WRITEQ TD
+   QUEUE("CSMT")
+   FROM(ErrorMsg)
+   LENGTH(MsgLen);
+
+   /*****************************************************************/
+   /* Format second error message                                   */
+   /* -"ERROR - Operation <xxx> CompCode <x> Reason <x> Object <x>" */
+   /*****************************************************************/
+
+   MsgLen = (short) sprintf(ErrorMsg, ERROR_MSG_2, Operation,
+                       CompCode, Reason, ObjName);
+
+   EXEC CICS WRITEQ TD
+   QUEUE("CSMT")
+   FROM(ErrorMsg)
+   LENGTH(MsgLen);
+
+   return;
+   }
+
+
+
+/*********************************************************************/
+/*  This function forwards a message to the sample's dead letter     */
+/*  queue.                                                           */
+/*********************************************************************/
+
+void ForwardMsgToDLQ(void)
+   {
+   PMQDLH pDLQHdr;
+
+   /*****************************************************************/
+   /* Set up Put message options for dead letter queue              */
+   /*****************************************************************/
+
+   PutMsgOpts.Options = MQPMO_SYNCPOINT +
+                   MQPMO_PASS_IDENTITY_CONTEXT;
+   PutMsgOpts.Context = Hobj_InputQ;
+
+   /*****************************************************************/
+   /* Set up dead letter message data                               */
+   /*****************************************************************/
+
+   PutBuffLen  = min(DataLen, MsgBuffLen);
+   PutBuffLen  = min(PutBuffLen, 2000);
+   memcpy( DLQBuffer.MessageData,
+      &MsgBuffer,
+      (size_t) PutBuffLen);
+   PutBuffLen += sizeof(MQDLH);
+
+   /*****************************************************************/
+   /* Set up dead letter message header                             */
+   /*****************************************************************/
+
+   pDLQHdr = &DLQBuffer.DeadLetterHeader;
+
+   memcpy( pDLQHdr->StrucId , MQDLH_STRUC_ID , sizeof(MQCHAR4) );
+   pDLQHdr->Version = MQDLH_VERSION_1;
+
+   if (bBadMsg == FALSE)
+   {
+     pDLQHdr->Reason  = Reason;
+     memcpy( pDLQHdr->DestQName,
+        ObjDesc.ObjectName,
+        MQ_Q_NAME_LENGTH );
+   }
+   else
+   {
+     pDLQHdr->Reason  = MQFB_XMIT_Q_MSG_ERROR;
+     memset( pDLQHdr->DestQName, ' ', MQ_Q_NAME_LENGTH );
+   };
+
+   memset( pDLQHdr->DestQMgrName, ' ', MQ_Q_NAME_LENGTH );
+   pDLQHdr->Encoding       = MsgDesc.Encoding;
+   pDLQHdr->CodedCharSetId = MsgDesc.CodedCharSetId;
+   memcpy( pDLQHdr->Format , MsgDesc.Format , MQ_FORMAT_LENGTH );
+   pDLQHdr->PutApplType = MQAT_CICS;
+   memset( pDLQHdr->PutApplName, ' ', MQ_PUT_APPL_NAME_LENGTH );
+   strncpy( pDLQHdr->PutApplName, APPL_NAME, MQ_PUT_APPL_NAME_LENGTH );
+
+   /*****************************************************************/
+   /* Set up Object descriptor for dead letter queue                */
+   /*****************************************************************/
+
+   ObjDesc.ObjectType = MQOT_Q;
+   strncpy(ObjDesc.ObjectName, DEAD_QNAME, MQ_Q_NAME_LENGTH);
+
+   /*****************************************************************/
+   /* Set up Message descriptor for dead letter queue               */
+   /*****************************************************************/
+
+   MsgDesc.Persistence = MQPER_PERSISTENCE_AS_Q_DEF;
+   memcpy( MsgDesc.Format
+    , MQFMT_DEAD_LETTER_HEADER
+    , MQ_FORMAT_LENGTH
+    );
+
+   /*****************************************************************/
+   /* Put the message to the dead letter queue                      */
+   /*****************************************************************/
+
+   MQPUT1(Hconn,
+     &ObjDesc,
+     &MsgDesc,
+     &PutMsgOpts,
+     PutBuffLen,
+     &DLQBuffer,
+     &CompCode,
+     &Reason);
+
+   strncpy(Operation, "MQPUT TO DLQ", sizeof(Operation));
+   strncpy(ObjName, DEAD_QNAME, MQ_Q_NAME_LENGTH);
+   RecordCallError();
+
+   return;
+   }
+
+
+
+
+/*********************************************************************/
+/*  This function converts the CICS packed decimal task number to    */
+/*  a long integer.                                                  */
+/*********************************************************************/
+
+void PackToLong(unsigned char *source,
+             unsigned int source_size,
+             long int *target)
+   {
+
+   static const unsigned char lmask = 0x0f;
+
+   unsigned int i;
+   long int result = 0;
+   unsigned int high_nibble, low_nibble;
+
+   for (i = 0; i < source_size-1; i++)
+      {
+      high_nibble = ((unsigned int)(source[i]>>4))&lmask;
+      result *= 10;
+      result += (long) high_nibble;
+
+      low_nibble = (unsigned int) source[i]&lmask;
+      result *= 10;
+      result += (long) low_nibble;
+      }
+
+   high_nibble = ((unsigned int)(source[i]>>4))&lmask;
+   result *= 10;
+   result += (long) high_nibble;
+
+   low_nibble = (unsigned int) (source[i]&lmask);
+   if (low_nibble == 0xd)
+      {
+      result *= -1;
+      }
+
+   *target = result;
+
+   return;
+   }
+
+
+

@@ -1,0 +1,6 @@
+# name                  number  type    flags   comments
+REASON                  410     long    -       -
+QMNAME                  411     carray  -       -
+QNAME                   412     carray  -       used for dollar format
+MSG                     419     carray  -       -
+#
