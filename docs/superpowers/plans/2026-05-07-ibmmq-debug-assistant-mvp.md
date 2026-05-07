@@ -1,4 +1,4 @@
-# IBMMQ Debug Assistant MVP Implementation Plan
+# IBMMQ Debug Assistant Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -24,7 +24,7 @@
 - Create: `src/mq/MessageFormatter.cpp` - formatter implementation
 - Create: `tests/test_message_formatter.cpp` - formatter/search unit tests
 - Create: `tests/test_connection_config.cpp` - config serialization tests
-- Create: `README.md` - run/build basics and MVP scope
+- Create: `README.md` - run/build basics and first-version scope
 
 ### Task 1: Bootstrap Build + App Shell
 
@@ -306,7 +306,7 @@ Expected: tests PASS; app shows next-page and filter behavior
 
 Run: `git add src/mq/MessageFormatter.h src/mq/MessageFormatter.cpp src/mq/MqTypes.h src/mq/MqWorker.cpp src/app/MainWindow.cpp tests/test_message_formatter.cpp CMakeLists.txt && git commit -m "feat: implement message browse with next-page and in-page search"`
 
-### Task 7: Error UX + Logging + MVP Hardening
+### Task 7: Error UX + Logging + First-Version Hardening
 
 **Files:**
 - Modify: `src/app/MainWindow.cpp`
@@ -334,17 +334,17 @@ QString formatError(const MqError& e) {
 }
 ```
 
-- [ ] **Step 4: Run final MVP verification**
+- [ ] **Step 4: Run final first-version verification**
 
 Run: `cmake --build build -j && ctest --test-dir build -V`
 Expected: PASS tests; manual checklist complete
 
 - [ ] **Step 5: Commit**
 
-Run: `git add src/app/MainWindow.cpp src/mq/MqTypes.h README.md && git commit -m "chore: polish error reporting and stabilize mvp workflows"`
+Run: `git add src/app/MainWindow.cpp src/mq/MqTypes.h README.md && git commit -m "chore: polish error reporting and stabilize first-version workflows"`
 
 ## Self-Review
 
-- **Spec coverage:** All MVP requirements are mapped: connection management (Task 2/4), queue-channel browse (Task 5), message browse/search (Task 6), diagnostics (Task 4/7).
+- **Spec coverage:** All first-version requirements are mapped: connection management (Task 2/4), queue-channel browse (Task 5), message browse/search (Task 6), diagnostics (Task 4/7).
 - **Placeholder scan:** No TODO/TBD placeholders; each task includes concrete files, commands, and expected outcomes.
 - **Type consistency:** `ConnectionConfig`, `MqError`, list and browse result structs are introduced before use and reused consistently.

@@ -6,9 +6,13 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QJsonObject>
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -16,10 +20,49 @@
 
 #include "mq/MessageFormatter.h"
 #include "mq/MqWorker.h"
+#include "report/ReportBuilder.h"
 
 namespace {
 QString formatError(const MqError &error) {
   return QString("[%1] code=%2 %3").arg(error.where).arg(error.code).arg(error.reasonText);
+}
+
+QString buildCommonStyleSheet() {
+  return QString(
+      "QWidget { font-size: 13px; }"
+      "QGroupBox {"
+      "  font-weight: 600;"
+      "  border-radius: 10px;"
+      "  margin-top: 10px;"
+      "  padding-top: 10px;"
+      "}"
+      "QGroupBox::title {"
+      "  subcontrol-origin: margin;"
+      "  left: 10px;"
+      "  padding: 0 4px;"
+      "}"
+      "QPushButton {"
+      "  border: none;"
+      "  border-radius: 7px;"
+      "  padding: 6px 12px;"
+      "}"
+      "QPushButton:disabled {"
+      "  background: #9CA3AF;"
+      "  color: #F3F4F6;"
+      "}"
+      "QLineEdit {"
+      "  border-radius: 7px;"
+      "  padding: 6px 8px;"
+      "}"
+      "QTreeWidget, QListWidget, QPlainTextEdit {"
+      "  border-radius: 8px;"
+      "}"
+      "QHeaderView::section {"
+      "  border: none;"
+      "  border-right: 1px solid #E5E7EB;"
+      "  padding: 6px;"
+      "  font-weight: 600;"
+      "}");
 }
 } // namespace
 
@@ -46,7 +89,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   auto *layout = new QVBoxLayout(root);
   layout->setContentsMargins(12, 12, 12, 12);
   layout->setSpacing(10);
-  auto *title = new QLabel("IBMMQ \u8c03\u8bd5\u52a9\u624b MVP", root);
+  auto *title = new QLabel("IBMMQ \u8c03\u8bd5\u52a9\u624b", root);
   title->setStyleSheet("font-size: 18px; font-weight: 600; padding: 4px 0;");
   auto *buttonRow = new QWidget(root);
   auto *buttonLayout = new QHBoxLayout(buttonRow);
@@ -56,17 +99,26 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   browseButton_ = new QPushButton("\u6d4f\u89c8\u6d88\u606f", buttonRow);
   receiveButton_ = new QPushButton("\u6536\u53d6\u4e00\u6761", buttonRow);
   nextButton_ = new QPushButton("\u4e0b\u4e00\u9875", buttonRow);
+  replayButton_ = new QPushButton("\u56de\u653e\u4f1a\u8bdd", buttonRow);
+  themeToggleButton_ = new QPushButton("\u5207\u6362\u5230\u6697\u8272", buttonRow);
+  auto *exportReportButton = new QPushButton("\u5bfc\u51fa\u62a5\u544a", buttonRow);
   connectButton_->setMinimumHeight(34);
   refreshButton_->setMinimumHeight(34);
   browseButton_->setMinimumHeight(34);
   receiveButton_->setMinimumHeight(34);
   nextButton_->setMinimumHeight(34);
+  replayButton_->setMinimumHeight(34);
+  themeToggleButton_->setMinimumHeight(34);
+  exportReportButton->setMinimumHeight(34);
   nextButton_->setEnabled(false);
   buttonLayout->addWidget(connectButton_);
   buttonLayout->addWidget(refreshButton_);
   buttonLayout->addWidget(browseButton_);
   buttonLayout->addWidget(receiveButton_);
   buttonLayout->addWidget(nextButton_);
+  buttonLayout->addWidget(replayButton_);
+  buttonLayout->addWidget(themeToggleButton_);
+  buttonLayout->addWidget(exportReportButton);
   buttonLayout->addStretch();
   buttonLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -117,6 +169,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   logBox_ = new QPlainTextEdit(leftPanel);
   logBox_->setReadOnly(true);
   logBox_->setObjectName("logBox");
+  diagnosisBox_ = new QPlainTextEdit(leftPanel);
+  diagnosisBox_->setReadOnly(true);
+  diagnosisBox_->setObjectName("diagnosisBox");
+  diagnosisBox_->setPlaceholderText("故障诊断建议将显示在这里");
 
   auto *sendPanel = new QGroupBox("\u6d88\u606f\u53d1\u9001", root);
   auto *sendPanelLayout = new QVBoxLayout(sendPanel);
@@ -139,52 +195,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   sendPanelLayout->addWidget(sendQueueRow);
   sendPanelLayout->addLayout(sendLayout);
 
-  root->setStyleSheet(
-      "QWidget { font-size: 13px; }"
-      "QGroupBox {"
-      "  font-weight: 600;"
-      "  border: 1px solid #D8DEE9;"
-      "  border-radius: 8px;"
-      "  margin-top: 10px;"
-      "  padding-top: 8px;"
-      "  background: #F8FAFC;"
-      "}"
-      "QGroupBox::title {"
-      "  subcontrol-origin: margin;"
-      "  left: 10px;"
-      "  padding: 0 4px;"
-      "}"
-      "QPushButton {"
-      "  background: #2563EB;"
-      "  color: white;"
-      "  border: none;"
-      "  border-radius: 6px;"
-      "  padding: 6px 12px;"
-      "}"
-      "QPushButton:hover { background: #1D4ED8; }"
-      "QPushButton:pressed { background: #1E40AF; }"
-      "QLineEdit {"
-      "  border: 1px solid #CBD5E1;"
-      "  border-radius: 6px;"
-      "  padding: 6px 8px;"
-      "  background: white;"
-      "}"
-      "QTreeWidget, QListWidget, QPlainTextEdit {"
-      "  border: 1px solid #D1D5DB;"
-      "  border-radius: 6px;"
-      "  background: white;"
-      "}"
-      "QHeaderView::section {"
-      "  background: #F3F4F6;"
-      "  border: none;"
-      "  border-right: 1px solid #E5E7EB;"
-      "  padding: 6px;"
-      "  font-weight: 600;"
-      "}");
-
   leftLayout->addWidget(objectTree_, 1);
   leftLayout->addWidget(messageRow, 1);
   leftLayout->addWidget(logBox_, 1);
+  leftLayout->addWidget(diagnosisBox_, 1);
 
   contentLayout->addWidget(leftPanel, 1);
   contentLayout->addWidget(configPanel);
@@ -194,6 +208,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
   layout->addWidget(contentRow, 1);
   layout->addWidget(sendPanel);
   setCentralWidget(root);
+  sessionRecorder_.startSession("dev");
 
   currentConfig_.name = "default";
   currentConfig_.queueManager = "QM1";
@@ -312,6 +327,37 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     emit requestSendMessage(currentConfig_, queueName, body);
   });
 
+  connect(replayButton_, &QPushButton::clicked, this, [this]() { runReplay(); });
+  connect(themeToggleButton_, &QPushButton::clicked, this, [this]() {
+    isDarkTheme_ = !isDarkTheme_;
+    applyTheme();
+  });
+
+  connect(exportReportButton, &QPushButton::clicked, this, [this]() {
+    ReportBuilder reportBuilder;
+    const QString markdown =
+        reportBuilder.buildMarkdown(sessionRecorder_.current(), diagnosisHistory_);
+    const QString stamp = QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss");
+    const QString fileName = QString("replay-report-%1.md").arg(stamp);
+    QDir reportsDir("reports");
+    if (!reportsDir.exists() && !reportsDir.mkpath(".")) {
+      appendLog(QString("\u62a5\u544a\u5bfc\u51fa\u5931\u8d25: \u65e0\u6cd5\u521b\u5efa\u76ee\u5f55 %1")
+                    .arg(reportsDir.absolutePath()));
+      return;
+    }
+    const QString filePath = reportsDir.filePath(fileName);
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+      appendLog(QString("\u62a5\u544a\u5bfc\u51fa\u5931\u8d25: \u65e0\u6cd5\u5199\u5165 %1")
+                    .arg(QFileInfo(filePath).absoluteFilePath()));
+      return;
+    }
+    file.write(markdown.toUtf8());
+    file.close();
+    appendLog(QString("\u62a5\u544a\u5bfc\u51fa\u6210\u529f: %1")
+                  .arg(QFileInfo(filePath).absoluteFilePath()));
+  });
+
   connect(searchEdit_, &QLineEdit::textChanged, this, [this]() {
     if (!messageList_) {
       return;
@@ -324,6 +370,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
       }
     }
   });
+
+  applyTheme();
 }
 
 MainWindow::~MainWindow() {
@@ -333,6 +381,7 @@ MainWindow::~MainWindow() {
 
 void MainWindow::onConnected(const ConnectResult &result) {
   setBusy(false);
+  recordSessionEvent("onConnected", result.ok, result.error);
 
   if (result.ok) {
     appendLog("\u8fde\u63a5\u6210\u529f");
@@ -340,10 +389,17 @@ void MainWindow::onConnected(const ConnectResult &result) {
   }
 
   appendLog(QString("\u8fde\u63a5\u5931\u8d25: %1").arg(formatError(result.error)));
+  DiagnosisContext context;
+  context.scene = "connect";
+  context.errorCode = result.error.code;
+  context.errorText = result.error.reasonText;
+  context.attrs.insert("where", result.error.where);
+  appendDiagnosis(diagnosisEngine_.diagnose(context), context.scene, result.error);
 }
 
 void MainWindow::onObjectsListed(const ObjectListResult &result) {
   setBusy(false);
+  recordSessionEvent("onObjectsListed", result.ok, result.error, QString(), result.items.size());
   if (!objectTree_) {
     return;
   }
@@ -351,6 +407,12 @@ void MainWindow::onObjectsListed(const ObjectListResult &result) {
   objectTree_->clear();
   if (!result.ok) {
     appendLog(QString("\u5237\u65b0\u5931\u8d25: %1").arg(formatError(result.error)));
+    DiagnosisContext context;
+    context.scene = "listObjects";
+    context.errorCode = result.error.code;
+    context.errorText = result.error.reasonText;
+    context.attrs.insert("where", result.error.where);
+    appendDiagnosis(diagnosisEngine_.diagnose(context), context.scene, result.error);
     return;
   }
 
@@ -370,12 +432,21 @@ void MainWindow::onObjectsListed(const ObjectListResult &result) {
 
 void MainWindow::onMessagesBrowsed(const BrowseResult &result) {
   setBusy(false);
+  const QString browseQueueName = queueNameEdit_ ? queueNameEdit_->text().trimmed() : QString();
+  recordSessionEvent("onMessagesBrowsed", result.ok, result.error, browseQueueName, result.page.size());
   if (!messageList_) {
     return;
   }
 
   if (!result.ok) {
     appendLog(QString("\u6d4f\u89c8\u5931\u8d25: %1").arg(formatError(result.error)));
+    DiagnosisContext context;
+    context.scene = "browse";
+    context.errorCode = result.error.code;
+    context.errorText = result.error.reasonText;
+    context.attrs.insert("where", result.error.where);
+    context.attrs.insert("queueName", browseQueueName);
+    appendDiagnosis(diagnosisEngine_.diagnose(context), context.scene, result.error);
     return;
   }
 
@@ -400,8 +471,16 @@ void MainWindow::onMessagesBrowsed(const BrowseResult &result) {
 
 void MainWindow::onMessageSent(const SendResult &result) {
   setBusy(false);
+  recordSessionEvent("onMessageSent", result.ok, result.error, result.queueName);
   if (!result.ok) {
     appendLog(QString("\u53d1\u9001\u5931\u8d25: %1").arg(formatError(result.error)));
+    DiagnosisContext context;
+    context.scene = "send";
+    context.errorCode = result.error.code;
+    context.errorText = result.error.reasonText;
+    context.attrs.insert("where", result.error.where);
+    context.attrs.insert("queueName", result.queueName);
+    appendDiagnosis(diagnosisEngine_.diagnose(context), context.scene, result.error);
     return;
   }
   appendLog(
@@ -412,11 +491,20 @@ void MainWindow::onMessageSent(const SendResult &result) {
 
 void MainWindow::onMessageReceived(const ReceiveResult &result) {
   setBusy(false);
+  recordSessionEvent("onMessageReceived", result.ok, result.error, result.queueName,
+                     result.hasMessage ? 1 : 0);
   if (!messageList_) {
     return;
   }
   if (!result.ok) {
     appendLog(QString("\u6536\u53d6\u5931\u8d25: %1").arg(formatError(result.error)));
+    DiagnosisContext context;
+    context.scene = "receive";
+    context.errorCode = result.error.code;
+    context.errorText = result.error.reasonText;
+    context.attrs.insert("where", result.error.where);
+    context.attrs.insert("queueName", result.queueName);
+    appendDiagnosis(diagnosisEngine_.diagnose(context), context.scene, result.error);
     return;
   }
   if (!result.hasMessage) {
@@ -433,6 +521,68 @@ void MainWindow::appendLog(const QString &message) {
   }
   const QString ts = QDateTime::currentDateTime().toString("HH:mm:ss");
   logBox_->appendPlainText(QString("[%1] %2").arg(ts, message));
+}
+
+void MainWindow::appendDiagnosis(const DiagnosisResult &diagnosis, const QString &scene,
+                                 const MqError &error) {
+  diagnosisHistory_.append(diagnosis);
+  if (!diagnosisBox_) {
+    return;
+  }
+  const QString ts = QDateTime::currentDateTime().toString("HH:mm:ss");
+  const QString faultType = diagnosis.faultType.isEmpty() ? "Unknown" : diagnosis.faultType;
+  diagnosisBox_->appendPlainText(
+      QString("[%1] scene=%2 faultType=%3 confidence=%4").arg(ts, scene, faultType).arg(
+          diagnosis.confidence));
+  if (!error.reasonText.isEmpty()) {
+    diagnosisBox_->appendPlainText(QString("  error=%1 (code=%2)").arg(error.reasonText).arg(error.code));
+  }
+  if (!diagnosis.actions.isEmpty()) {
+    for (const auto &action : diagnosis.actions) {
+      diagnosisBox_->appendPlainText(QString("  - %1").arg(action));
+    }
+  }
+  diagnosisBox_->appendPlainText(QString());
+}
+
+void MainWindow::recordSessionEvent(const QString &eventType, bool ok, const MqError &error,
+                                    const QString &queueName, int itemCount) {
+  QJsonObject snapshot;
+  snapshot["queueManager"] = currentConfig_.queueManager;
+  snapshot["channel"] = currentConfig_.channel;
+  snapshot["connName"] = currentConfig_.connName;
+  if (!queueName.isEmpty()) {
+    snapshot["queueName"] = queueName;
+  }
+  if (itemCount > 0) {
+    snapshot["itemCount"] = itemCount;
+  }
+
+  SessionEvent event;
+  event.eventType = eventType;
+  event.timestamp = QDateTime::currentDateTime().toString(Qt::ISODate);
+  event.inputSnapshot = snapshot;
+  event.ok = ok;
+  event.durationMs = 0;
+  if (!ok) {
+    event.errorCode = error.code;
+    event.errorText = error.reasonText;
+  }
+  sessionRecorder_.recordEvent(event);
+}
+
+void MainWindow::runReplay() {
+  const SessionData session = sessionRecorder_.current();
+  const QVector<ReplayDelta> deltas = replayService_.replayReadOnly(session);
+  appendLog(QString("会话回放: 只读模式 步骤=%1").arg(deltas.size()));
+  if (deltas.isEmpty()) {
+    appendLog("会话回放: 未找到 connect/list/browse 事件");
+    return;
+  }
+  for (const ReplayDelta &delta : deltas) {
+    appendLog(QString("回放 步骤-%1 | 历史=%2 | 当前=%3")
+                  .arg(delta.step, delta.history, delta.current));
+  }
 }
 
 void MainWindow::setBusy(bool busy) {
@@ -479,4 +629,43 @@ bool MainWindow::validateConnectionInputs() const {
     return false;
   }
   return true;
+}
+
+void MainWindow::applyTheme() {
+  if (!centralWidget()) {
+    return;
+  }
+  centralWidget()->setStyleSheet(isDarkTheme_ ? buildDarkThemeStyleSheet() : buildLightThemeStyleSheet());
+  if (themeToggleButton_) {
+    themeToggleButton_->setText(isDarkTheme_ ? "切换到浅色" : "切换到暗色");
+  }
+}
+
+QString MainWindow::buildLightThemeStyleSheet() const {
+  return buildCommonStyleSheet() +
+         "QWidget { background: #F5F7FB; color: #1F2937; }"
+         "QGroupBox { border: 1px solid #D8DEE9; background: #F8FAFC; }"
+         "QPushButton { background: #2563EB; color: #FFFFFF; }"
+         "QPushButton:hover { background: #1D4ED8; }"
+         "QPushButton:pressed { background: #1E40AF; }"
+         "QLineEdit { border: 1px solid #CBD5E1; background: #FFFFFF; color: #111827; }"
+         "QTreeWidget, QListWidget, QPlainTextEdit { border: 1px solid #D1D5DB; background: #FFFFFF; color: #111827; alternate-background-color: #F8FAFC; }"
+         "QTreeWidget::item, QListWidget::item { background: transparent; color: #111827; }"
+         "QTreeWidget::item:selected, QListWidget::item:selected { background: #DBEAFE; color: #111827; }"
+         "QHeaderView::section { background: #F3F4F6; color: #374151; }";
+}
+
+QString MainWindow::buildDarkThemeStyleSheet() const {
+  return buildCommonStyleSheet() +
+         "QWidget { background: #0F172A; color: #E5E7EB; }"
+         "QGroupBox { border: 1px solid #334155; background: #111827; }"
+         "QPushButton { background: #3B82F6; color: #F8FAFC; }"
+         "QPushButton:hover { background: #2563EB; }"
+         "QPushButton:pressed { background: #1D4ED8; }"
+         "QLineEdit { border: 1px solid #475569; background: #1F2937; color: #F3F4F6; }"
+         "QLineEdit:focus { border: 1px solid #60A5FA; }"
+         "QTreeWidget, QListWidget, QPlainTextEdit { border: 1px solid #334155; background: #111827; color: #E5E7EB; alternate-background-color: #0B1220; }"
+         "QTreeWidget::item, QListWidget::item { background: transparent; color: #E5E7EB; }"
+         "QTreeWidget::item:selected, QListWidget::item:selected { background: #1E3A8A; color: #F8FAFC; }"
+         "QHeaderView::section { background: #1E293B; color: #CBD5E1; border-right: 1px solid #334155; }";
 }

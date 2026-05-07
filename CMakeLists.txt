@@ -19,8 +19,12 @@ add_executable(ibmmq_debug_assistant
     src/main.cpp
     src/app/MainWindow.cpp
     src/app/MetaTypeRegistry.cpp
+    src/diagnosis/DiagnosisRuleEngine.cpp
     src/mq/MqWorker.cpp
     src/mq/MessageFormatter.cpp
+    src/report/ReportBuilder.cpp
+    src/session/ReplayService.cpp
+    src/session/SessionRecorder.cpp
 )
 
 target_include_directories(ibmmq_debug_assistant PRIVATE src)
@@ -56,3 +60,27 @@ add_executable(metatype_registration_test
 target_include_directories(metatype_registration_test PRIVATE src)
 target_link_libraries(metatype_registration_test PRIVATE Qt5::Test Qt5::Core)
 add_test(NAME metatype_registration_test COMMAND metatype_registration_test)
+
+add_executable(diagnosis_engine_test
+    tests/test_diagnosis_engine.cpp
+    src/diagnosis/DiagnosisRuleEngine.cpp
+)
+target_include_directories(diagnosis_engine_test PRIVATE src)
+target_link_libraries(diagnosis_engine_test PRIVATE Qt5::Test Qt5::Core)
+add_test(NAME diagnosis_engine_test COMMAND diagnosis_engine_test)
+
+add_executable(session_recorder_test
+    tests/test_session_recorder.cpp
+    src/session/SessionRecorder.cpp
+)
+target_include_directories(session_recorder_test PRIVATE src)
+target_link_libraries(session_recorder_test PRIVATE Qt5::Test Qt5::Core)
+add_test(NAME session_recorder_test COMMAND session_recorder_test)
+
+add_executable(report_builder_test
+    tests/test_report_builder.cpp
+    src/report/ReportBuilder.cpp
+)
+target_include_directories(report_builder_test PRIVATE src)
+target_link_libraries(report_builder_test PRIVATE Qt5::Test Qt5::Core)
+add_test(NAME report_builder_test COMMAND report_builder_test)
